@@ -10,7 +10,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import sun.swing.StringUIClientPropertyKey;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -40,12 +42,16 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         // could be use to provide more authentication types like digest, OAUTH2, Basic....
         if (requestTokenHeader != null && requestTokenHeader.startsWith("Bearer ")) {
             jwtToken = requestTokenHeader.substring(7);
-            try {
-                username = jwtTokenService.getUsernameFromToken(jwtToken);
-            } catch (IllegalArgumentException e) {
-                log.info("Unable to get JWT Token");
-            } catch (ExpiredJwtException e) {
-                log.info("JWT Token has expired");
+            if( !StringUtils.isEmpty(jwtToken) ){
+                try {
+                    username = jwtTokenService.getUsernameFromToken(jwtToken);
+                } catch (IllegalArgumentException e) {
+                    log.info("Unable to get JWT Token");
+                } catch (ExpiredJwtException e) {
+                    log.info("JWT Token has expired");
+                }
+            }else{
+                logger.warn("JWT Token does not have a Token String");
             }
         } else {
             logger.warn("JWT Token does not begin with Bearer String");

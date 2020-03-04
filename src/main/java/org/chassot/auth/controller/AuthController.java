@@ -1,11 +1,10 @@
 package org.chassot.auth.controller;
 
 import lombok.extern.slf4j.Slf4j;
-import org.chassot.auth.model.Token;
 import org.chassot.auth.model.Usuario;
 import org.chassot.auth.model.dto.ClientCredential;
 import org.chassot.auth.model.dto.NewUser;
-import org.chassot.auth.model.dto.User;
+import org.chassot.auth.model.dto.UserLoggedIn;
 import org.chassot.auth.services.JwtTokenService;
 import org.chassot.auth.services.JwtUserDetailsService;
 import org.chassot.auth.services.UsuarioService;
@@ -13,6 +12,8 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -33,23 +34,44 @@ public class AuthController {
     ModelMapper modelMapper = new ModelMapper();
 
     @PostMapping
-    public ResponseEntity<Token> authenticate(@RequestBody ClientCredential clientCredential) throws Exception {
-        final UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(clientCredential.getUid());
-        final String token = jwtTokenService.generateToken(userDetails);
-        return ResponseEntity.ok(new Token(token));
+    public ResponseEntity<UserLoggedIn> authenticate(@RequestBody ClientCredential clientCredential) throws Exception {
+        try{
+            final UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(clientCredential.getUid());
+
+            if(clientCredential.getSecret().equals(userDetails.getPassword())){
+                final String token = jwtTokenService.generateToken(userDetails);
+                return ResponseEntity.ok(new UserLoggedIn(userDetails, token, null));
+            }else{
+                return ResponseEntity.ok(new UserLoggedIn(userDetails, null, "password validation failed"));
+            }
+        }catch (UsernameNotFoundException ex){
+            return ResponseEntity.ok(new UserLoggedIn(null, null, "user not found"));
+        }
     }
 
     @PostMapping(path = "register")
-    public ResponseEntity<User> register(@RequestBody NewUser newUser) throws Exception {
-        log.debug(newUser.toString());
+    public ResponseEntity<UserLoggedIn> register(@RequestBody NewUser newUser) throws Exception {
         Usuario usuario = modelMapper.map(newUser, Usuario.class);
-
+        log.debug(usuario.toString());
         Usuario usuarioSalvo = usuarioService.save(usuario);
 
-        User retorno = modelMapper.map(usuarioSalvo, User.class);
+        UserLoggedIn retorno = new UserLoggedIn();
+        retorno.setUser(modelMapper.map(jwtUserDetailsService.loadUserByUsername(usuarioSalvo.getEmail()), UserDetails.class));
         retorno.setToken(jwtTokenService.generateToken(
                 jwtUserDetailsService.loadUserByUsername(usuarioSalvo.getEmail())));
         return ResponseEntity.ok(retorno);
+    }
+
+    @GetMapping(path = "loadsession")
+    public ResponseEntity<UserLoggedIn> loadSession(@RequestHeader(value = "Authorization") String token) throws Exception {
+        try{
+            String userEmail = jwtTokenService.getUsernameFromToken(StringUtils.split(token, " ")[1]);
+            UserDetails user = jwtUserDetailsService.loadUserByUsername(userEmail);
+            return ResponseEntity.ok(new UserLoggedIn(user, token, null));
+        } catch (Exception ex){
+            return ResponseEntity.badRequest().body(new UserLoggedIn(null, null, ex.getMessage()));
+        }
+
     }
 
     @GetMapping(path = "/active/{token}")

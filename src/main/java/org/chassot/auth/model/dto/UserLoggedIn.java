@@ -1,20 +1,15 @@
 package org.chassot.auth.model.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.springframework.security.core.userdetails.UserDetails;
+import lombok.NoArgsConstructor;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class UserLoggedIn {
-    private UserDetails user;
+    private UserInfo user;
     private String token;
     private String msg;
 
-    public UserLoggedIn(UserDetails user, String token, String msg) {
-        this.user = user;
-        this.token = token;
-        this.msg = msg;
-    }
-
-    public UserLoggedIn() {
-    }
 }

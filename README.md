@@ -4,7 +4,7 @@ JWT based authentication.
 
 serviços de autenticação e controle de usuários.
 
-#Postgres On Docker
+# Postgres On Docker
 Utilize esta definição de docker-compose para rodar uma instância do postgres e pgadmin
 ```yaml
 version: '3.5'
@@ -49,7 +49,7 @@ volumes:
     pgadmin:
 ```
 
- #Auth on docker
+ # Auth on docker
  É possível realizar o build de uma imagem docker do serviço Auth. Para isto utilize o comando
  
  ```shell sudo docker build -t auth-image .```
